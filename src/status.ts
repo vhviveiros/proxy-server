@@ -1,4 +1,4 @@
-import { RouterInterface } from './router' // Assuming RouterInterface is in the same directory
+import { RouterInterface } from './router'
 import { extractVars } from './utils' // Assuming extractVars is in the same directory
 import { Fetcher } from './fetcher' // Assuming Fetcher is in the same directory
 
@@ -125,14 +125,12 @@ export class GeneralStatus extends Fetcher {
 
 
     async fetch(router: RouterInterface): Promise<GeneralStatus> {
-        const doc = await router.page("StatusRpm")
-        const { general, lan, wlan, statist, wan } = await extractVars(doc, [
-            "statusPara",
-            "lanPara",
-            "wlanPara",
-            "statistList",
-            "wanPara",
-        ])
+        //doc receives the data from file "results.txt"
+        const doc = await router.page("StatusRpm.htm")
+        //Doc must have all the router info already
+        const [general, lan, wlan, statist, wan] = Object.values(extractVars(doc, [
+            "statusPara", "lanPara", "wlanPara", "statistList", "wanPara"
+        ]))
 
         const status = {
             ...this.parseStatus(general!),

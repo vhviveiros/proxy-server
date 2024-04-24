@@ -23,6 +23,10 @@ class RouterSession extends RouterInterface {
     constructor(autoReauth = true, authRetries = 3, timeout) {
         super();
         this.routerSettings = require('../assets/router-settings.json');
+        this.count = 0;
+        this.pageCount = 0;
+        this.pageLoadCount = 0;
+        this.getCount = 0;
         this.REAUTH_SUBSTR = 'cookie="Authorization=;path=/"';
         this.host = this.routerSettings.ip;
         this.autoReauth = autoReauth;
@@ -32,20 +36,21 @@ class RouterSession extends RouterInterface {
         const password = this.routerSettings.password;
         const passwordHash = ts_md5_1.Md5.hashStr(password);
         const basicRaw = `${username}:${passwordHash}`;
-        const basicToken = Buffer.from(basicRaw).toString('base64');
-        this.cookie = `Authorization=Basic ${basicToken}`;
-        this.refreshToken();
+        this.basicToken = Buffer.from(basicRaw).toString('base64');
+        this.cookie = `Authorization=Basic ${this.basicToken}`;
     }
     isSessionValid() {
         return __awaiter(this, void 0, void 0, function* () {
             const url = this.pageUrl("Index");
             const resp = yield this.get(url);
-            const reauth = this.isReauthDoc(resp.data);
+            const reauth = yield this.isReauthDoc(resp.data);
             return !reauth;
         });
     }
     refreshToken() {
         return __awaiter(this, void 0, void 0, function* () {
+            this.count++;
+            console.log(`Refreshing token for ${this.count} time...`);
             const attempts = this.authRetries + 1;
             for (let retry = 0; retry < attempts; retry++) {
                 const resp = yield this.get(`${this.baseUrl()}/userRpm/LoginRpm.htm?Save=Save`);
@@ -68,10 +73,13 @@ class RouterSession extends RouterInterface {
     }
     page(name, params) {
         return __awaiter(this, void 0, void 0, function* () {
+            this.pageCount++;
+            console.log(`Paging page ${name} for ${this.pageCount} time...`);
             let retry = false;
             while (true) {
                 const doc = yield this.pageLoadAttempt(name, params);
-                if (!this.isReauthDoc(doc)) {
+                //doc should be complete already
+                if (!(yield this.isReauthDoc(doc))) {
                     return doc;
                 }
                 if (retry || !this.autoReauth) {
@@ -84,20 +92,30 @@ class RouterSession extends RouterInterface {
     }
     pageLoadAttempt(name, params) {
         return __awaiter(this, void 0, void 0, function* () {
+            this.pageLoadCount++;
+            console.log(`Loading page ${name} for ${this.pageLoadCount} time...`);
             const url = this.pageUrl(name);
             const referer = this.pageUrl("MenuRpm");
-            const resp = yield this.get(url, params, { 'Referer': referer });
+            const resp = yield this.get(url, referer);
             if (resp.status !== 200) {
                 throw new Error(`HTTP code ${resp.status}`);
             }
             return resp.data;
         });
     }
-    get(url, params, headers) {
+    get(url, referer) {
         return __awaiter(this, void 0, void 0, function* () {
+            this.getCount++;
+            console.log(`Getting ${this.getCount} time...`);
             try {
-                params = `Cookie: ${this.cookie}`;
-                return yield axios_1.default.get(url, { headers: params });
+                const headers = {
+                    Cookie: this.cookie,
+                    Referer: referer
+                };
+                this.headers = headers;
+                const returnValue = yield axios_1.default.get(url, { headers: headers });
+                console.log(returnValue.data);
+                return returnValue;
             }
             catch (e) {
                 throw e;
@@ -106,7 +124,7 @@ class RouterSession extends RouterInterface {
     }
     isReauthDoc(doc) {
         return __awaiter(this, void 0, void 0, function* () {
-            const scripts = yield (0, script_finder_1.findScripts)(doc);
+            const scripts = (0, script_finder_1.findScripts)(doc);
             const firstScript = scripts[0];
             return firstScript.includes(this.REAUTH_SUBSTR);
         });

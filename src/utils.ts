@@ -1,25 +1,20 @@
 import { findScripts } from "./html"
 
-interface JsVars {
-    [key: string]: any[] | null
-}
+export function extractVars(document: string, vars: string[]): Record<string, any> {
+    let jsVars: Record<string, any> = {}
 
-export async function extractVars(document: string, vars: string[]): Promise<JsVars> {
-    let jsVars: JsVars = {}
+    for (let v of vars) {
+        jsVars[v] = null
+    }
 
-    vars.forEach((variable) => {
-        jsVars[variable] = null
-    })
-
-    const scripts = findScripts(document)
-
-    scripts.forEach((script: any) => {
-        for (let variable in jsVars) {
-            if (jsVars[variable] === null) {
-                jsVars[variable] = getVar(variable, script)
+    let scripts = findScripts(document)
+    for (let script of scripts) {
+        for (let v in jsVars) {
+            if (jsVars[v] === null) {
+                jsVars[v] = getVar(v, script)
             }
         }
-    })
+    }
 
     return jsVars
 }

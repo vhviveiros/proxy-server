@@ -1,11 +1,14 @@
 import { Md5 } from 'ts-md5'
 import { findScripts } from './script-finder'
-import axios from 'axios'
-import { wrapper } from 'axios-cookiejar-support'
-import { CookieJar } from 'tough-cookie'
+import axios, { AxiosInstance } from 'axios'
 
 export abstract class RouterInterface {
     abstract page(name: string, params?: any): Promise<string>
+}
+
+export interface HeaderInterface {
+    Cookie: string | undefined
+    Referer: string | undefined
 }
 
 export class RouterSession extends RouterInterface {
@@ -15,6 +18,9 @@ export class RouterSession extends RouterInterface {
     timeout: number | undefined
     token: string | undefined
     cookie: any | undefined
+    basicToken: string | undefined
+    session: AxiosInstance | undefined
+    headers: HeaderInterface | undefined
     readonly routerSettings = require('../assets/router-settings.json')
 
     constructor(autoReauth = true, authRetries = 3, timeout?: number) {
@@ -29,20 +35,22 @@ export class RouterSession extends RouterInterface {
 
         const passwordHash = Md5.hashStr(password)
         const basicRaw = `${username}:${passwordHash}`
-        const basicToken = Buffer.from(basicRaw).toString('base64')
-
-        this.cookie = `Authorization=Basic ${basicToken}`
-        this.refreshToken()
+        this.basicToken = Buffer.from(basicRaw).toString('base64')
+        this.cookie = `Authorization=Basic ${this.basicToken}`
     }
 
     async isSessionValid(): Promise<boolean> {
         const url = this.pageUrl("Index")
         const resp = await this.get(url)
-        const reauth = this.isReauthDoc(resp.data)
+        const reauth = await this.isReauthDoc(resp.data)
         return !reauth
     }
 
+    count: number = 0
+
     async refreshToken(): Promise<void> {
+        this.count++
+        console.log(`Refreshing token for ${this.count} time...`)
         const attempts = this.authRetries + 1
         for (let retry = 0; retry < attempts; retry++) {
             const resp = await this.get(`${this.baseUrl()}/userRpm/LoginRpm.htm?Save=Save`)
@@ -66,11 +74,16 @@ export class RouterSession extends RouterInterface {
         return `${this.baseUrl()}/${this.token}/userRpm/${name}.htm`
     }
 
+    pageCount = 0
     async page(name: string, params?: any): Promise<string> {
+        this.pageCount++
+        console.log(`Paging page ${name} for ${this.pageCount} time...`)
         let retry = false
+
         while (true) {
             const doc = await this.pageLoadAttempt(name, params)
-            if (!this.isReauthDoc(doc)) {
+            //doc should be complete already
+            if (!(await this.isReauthDoc(doc))) {
                 return doc
             }
 
@@ -83,11 +96,14 @@ export class RouterSession extends RouterInterface {
         }
     }
 
+    pageLoadCount = 0
     async pageLoadAttempt(name: string, params?: any): Promise<string> {
+        this.pageLoadCount++
+        console.log(`Loading page ${name} for ${this.pageLoadCount} time...`)
         const url = this.pageUrl(name)
         const referer = this.pageUrl("MenuRpm")
 
-        const resp = await this.get(url, params, { 'Referer': referer })
+        const resp = await this.get(url, referer)
         if (resp.status !== 200) {
             throw new Error(`HTTP code ${resp.status}`)
         }
@@ -95,10 +111,21 @@ export class RouterSession extends RouterInterface {
         return resp.data
     }
 
-    async get(url: string, params?: any, headers?: any): Promise<any> {
+    getCount = 0
+    async get(url: string, referer?: string): Promise<any> {
+        this.getCount++
+        console.log(`Getting ${this.getCount} time...`)
         try {
-            params = `Cookie: ${this.cookie}`
-            return await axios.get(url, { headers: params })
+            const headers = {
+                Cookie: this.cookie,
+                Referer: referer
+            }
+
+            this.headers = headers
+
+            const returnValue = await axios.get(url, { headers: headers })
+            console.log(returnValue.data)
+            return returnValue
         } catch (e) {
             throw e
         }
@@ -107,7 +134,7 @@ export class RouterSession extends RouterInterface {
     REAUTH_SUBSTR = 'cookie="Authorization=;path=/"';
 
     async isReauthDoc(doc: string): Promise<boolean> {
-        const scripts = await findScripts(doc)
+        const scripts = findScripts(doc)
         const firstScript = scripts[0]
         return firstScript.includes(this.REAUTH_SUBSTR)
     }

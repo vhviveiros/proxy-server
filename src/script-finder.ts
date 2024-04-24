@@ -1,25 +1,13 @@
-import axios from 'axios'
-import { JSDOM } from 'jsdom'
-
+import { Parser } from "htmlparser2"
 export class ScriptFinder {
-    scripts: string[]
-    scriptInProgress: boolean
-    currentScript: string
+    scripts: undefined | string[] = []
+    scriptInProgress: boolean = false
+    currentScript: string | undefined = ''
 
-    constructor() {
-        this.scripts = []
+    close() {
+        this.scripts = undefined
         this.scriptInProgress = false
-        this.currentScript = ''
-    }
-
-    getScripts(): string[] {
-        return this.scripts
-    }
-
-    close(): void {
-        this.scripts = []
-        this.scriptInProgress = false
-        this.currentScript = ''
+        this.currentScript = undefined
     }
 
     handleStartTag(tag: string): void {
@@ -33,35 +21,26 @@ export class ScriptFinder {
         if (tag !== 'script') return
 
         this.scriptInProgress = false
-        if (this.currentScript.trim()) {
-            this.scripts.push(this.currentScript)
+        if (this.currentScript?.trim()) {
+            this.scripts?.push(this.currentScript)
         }
         this.currentScript = ''
     }
 
     handleData(data: string): void {
         if (!this.scriptInProgress) return
-
         this.currentScript += data
     }
 }
 
-export async function findScripts(url: string): Promise<string[]> {
-    const response = await axios.get(url)
-    const dom = new JSDOM(response.data)
+export function findScripts(data: string): string[] {
     const finder = new ScriptFinder()
-
-    const { document } = dom.window
-    const scripts = Array.from(document.getElementsByTagName('script'))
-
-    scripts.forEach(script => {
-        finder.handleStartTag('script')
-        const textContent = (script as HTMLElement).textContent
-        if (textContent !== null) {
-            finder.handleData(textContent)
-        }
-        finder.handleEndTag('script')
+    const parser = new Parser({
+        onopentag: (name: string) => finder.handleStartTag(name),
+        ontext: (text: string) => finder.handleData(text),
+        onclosetag: (name: string) => finder.handleEndTag(name),
     })
-
-    return finder.getScripts()
+    parser.write(data)
+    parser.end()
+    return finder.scripts ?? []
 }

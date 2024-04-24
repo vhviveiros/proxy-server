@@ -88,14 +88,12 @@ class GeneralStatus extends fetcher_1.Fetcher {
     }
     fetch(router) {
         return __awaiter(this, void 0, void 0, function* () {
-            const doc = yield router.page("StatusRpm");
-            const { general, lan, wlan, statist, wan } = yield (0, utils_1.extractVars)(doc, [
-                "statusPara",
-                "lanPara",
-                "wlanPara",
-                "statistList",
-                "wanPara",
-            ]);
+            //doc receives the data from file "results.txt"
+            const doc = yield router.page("StatusRpm.htm");
+            //Doc must have all the router info already
+            const [general, lan, wlan, statist, wan] = Object.values((0, utils_1.extractVars)(doc, [
+                "statusPara", "lanPara", "wlanPara", "statistList", "wanPara"
+            ]));
             const status = Object.assign(Object.assign(Object.assign({}, this.parseStatus(general)), this.parseStatist(statist)), { "lan": this.parseLan(lan), "wlan": this.parseWlan(wlan, general), "wan": this.parseWan(wan, general) });
             const statusObj = new GeneralStatus(status);
             return statusObj;
