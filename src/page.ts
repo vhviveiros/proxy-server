@@ -17,15 +17,13 @@ export class Page {
         this.session = axios.create({
             headers: this.headers
         })
-
-        console.log(this.session.defaults.headers)
     }
 
     private basicToken(): string {
         let passwordHash = Md5.hashStr(this.credentials.pcPassword)
         let basicRaw = `${this.credentials.userName}:${passwordHash}`
         let basicToken = Buffer.from(basicRaw).toString('base64')
-        return "FBXKQYEAZUSVKIEA"
+        return basicToken
     }
 
     loadPage(url: string): Promise<AxiosResponse> {
@@ -37,10 +35,6 @@ export class Page {
     }
 
     pageUrl(name: string): string {
-        const url = `${this.baseUrl}/${this.basicToken()}/userRpm/${name}.htm`
-
-        console.log(url)
-
-        return url
+        return `${this.baseUrl}/${this.basicToken()}/userRpm/${name}.htm`
     }
 }

@@ -1,8 +1,6 @@
 import { Md5 } from "ts-md5"
 
 import axios from 'axios'
-import { wrapper } from 'axios-cookiejar-support'
-import { CookieJar } from 'tough-cookie'
 
 export class Test {
     constructor() {

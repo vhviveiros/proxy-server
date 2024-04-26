@@ -1,6 +1,6 @@
-import { RouterInterface } from './router'
-import { extractVars } from './utils' // Assuming extractVars is in the same directory
-import { Fetcher } from './fetcher' // Assuming Fetcher is in the same directory
+import { RouterInterface } from '../RouterSession'
+import { extractVars } from '../utils' // Assuming extractVars is in the same directory
+import { Fetcher } from './fetcher'
 
 enum RouterType {
     Wan = 1,
@@ -140,8 +140,7 @@ export class GeneralStatus extends Fetcher {
             "wan": this.parseWan(wan!, general!),
         }
 
-        const statusObj = new GeneralStatus(status)
-        return statusObj
+        return new GeneralStatus(status)
     }
 
     parseStatus(status: any[]): { [key: string]: any } {

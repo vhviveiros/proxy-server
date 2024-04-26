@@ -1,10 +1,9 @@
 // Abstract class Fetcher
 
-import { RouterInterface } from "./router"
-import { GeneralStatus } from "./status"
+import { RouterInterface } from "../RouterSession"
 
 export abstract class Fetcher {
-    abstract fetch(router: RouterInterface): Promise<GeneralStatus>
+    abstract fetch(router: RouterInterface): Promise<Fetcher>
 
     public toDict(): { [key: string]: any } {
         return this.asdict(this)

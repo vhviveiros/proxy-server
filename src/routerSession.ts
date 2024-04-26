@@ -1,52 +1,56 @@
-import axios from 'axios'
-import crypto from 'crypto'
-import { Optional } from 'typescript-optional'
+import { Md5 } from 'ts-md5'
+import { findScripts } from './script-finder'
+import axios, { AxiosInstance } from 'axios'
 
-abstract class RouterInterface {
-    abstract page(name: string, params?: Map<string, string>): Promise<string>
+export abstract class RouterInterface {
+    abstract page(name: string, params?: any): Promise<string>
 }
 
-class RouterSession extends RouterInterface {
-    private host: string
-    private autoReauth: boolean
-    private authRetries: number
-    private timeout: Optional<number>
-    private session: any
-    private token!: string
+export interface HeaderInterface {
+    Cookie: string | undefined
+    Referer: string | undefined
+}
 
-    constructor(host: string, username: string, password: string, autoReauth: boolean = true, authRetries: number = 3, timeout?: number) {
+export class RouterSession extends RouterInterface {
+    host: string
+    autoReauth: boolean
+    authRetries: number
+    timeout: number | undefined
+    token: string | undefined
+    cookie: any | undefined
+    basicToken: string | undefined
+    session: AxiosInstance | undefined
+    headers: HeaderInterface | undefined
+    readonly routerSettings = require('../assets/router-settings.json')
+
+    constructor(autoReauth = true, authRetries = 3, timeout?: number) {
         super()
-        this.host = host
+        this.host = this.routerSettings.ip
         this.autoReauth = autoReauth
         this.authRetries = Math.max(authRetries, 0)
-        this.timeout = Optional.ofNullable(timeout)
+        this.timeout = timeout
 
-        const passwordHash = crypto.createHash('md5').update(password).digest('hex')
+        const username = this.routerSettings.login
+        const password = this.routerSettings.password
+
+        const passwordHash = Md5.hashStr(password)
         const basicRaw = `${username}:${passwordHash}`
-        const basicToken = Buffer.from(basicRaw).toString('base64')
-
-        this.session = axios.create({
-            baseURL: `http://${this.host}`,
-            timeout: this.timeout.orElse(0),
-            headers: { 'Authorization': `Basic ${basicToken}` }
-        })
-
-        this.refreshToken()
+        this.basicToken = Buffer.from(basicRaw).toString('base64')
+        this.cookie = `Authorization=Basic ${this.basicToken}`
     }
 
     async isSessionValid(): Promise<boolean> {
         const url = this.pageUrl("Index")
-        const resp = await this._get(url)
-        const reauth = RouterSession._isReauthDoc(resp.data)
+        const resp = await this.get(url)
+        const reauth = await this.isReauthDoc(resp.data)
         return !reauth
     }
 
-    async refreshToken() {
+    async refreshToken(): Promise<void> {
         const attempts = this.authRetries + 1
         for (let retry = 0; retry < attempts; retry++) {
-            const resp = await this._get(`/userRpm/LoginRpm.htm?Save=Save`)
-
-            const match = resp.data.match(new RegExp(`${this.host}/(\\w+)/`))
+            const resp = await this.get(`${this.baseUrl()}/userRpm/LoginRpm.htm?Save=Save`)
+            const match = new RegExp(`${this.host}/(\\w+)/`).exec(resp.data)
             if (match) {
                 this.token = match[1]
                 if (await this.isSessionValid()) {
@@ -58,19 +62,21 @@ class RouterSession extends RouterInterface {
         throw new Error(`Failed to get auth token with specified username and password after ${attempts} attempts`)
     }
 
-    base_url(): string {
+    baseUrl(): string {
         return `http://${this.host}`
     }
 
     pageUrl(name: string): string {
-        return `${this.base_url()}/${this.token}/userRpm/${name}.htm`
+        return `${this.baseUrl()}/${this.token}/userRpm/${name}.htm`
     }
 
-    async page(name: string, params?: Map<string, string>): Promise<string> {
+    async page(name: string, referer?: string): Promise<string> {
         let retry = false
+
         while (true) {
-            const doc = await this._pageLoadAttempt(name, params)
-            if (!RouterSession._isReauthDoc(doc)) {
+            const doc = await this.pageLoadAttempt(name, referer)
+            //doc should be complete already
+            if (!(await this.isReauthDoc(doc))) {
                 return doc
             }
 
@@ -83,11 +89,11 @@ class RouterSession extends RouterInterface {
         }
     }
 
-    async _pageLoadAttempt(name: string, params?: Map<string, string>): Promise<string> {
+    async pageLoadAttempt(name: string, referer = this.pageUrl("MenuRpm")): Promise<string> {
         const url = this.pageUrl(name)
-        const referer = this.pageUrl("MenuRpm")
+        // const referer = this.pageUrl("MenuRpm")
 
-        const resp = await this._get(url, { params: params, headers: { "Referer": referer } })
+        const resp = await this.get(url, referer)
         if (resp.status !== 200) {
             throw new Error(`HTTP code ${resp.status}`)
         }
@@ -95,18 +101,25 @@ class RouterSession extends RouterInterface {
         return resp.data
     }
 
-    async _get(url: string, config?: any): Promise<any> {
+    async get(url: string, referer?: string): Promise<any> {
         try {
-            return await this.session.get(url, config)
+            const headers = {
+                Cookie: this.cookie,
+                Referer: referer
+            }
+
+            this.headers = headers
+            return await axios.get(url, { headers: headers })
         } catch (e) {
             throw e
         }
     }
 
-    static REAUTH_SUBSTR = 'cookie="Authorization=;path=/"';
+    REAUTH_SUBSTR = 'cookie="Authorization=;path=/"';
 
-    static _isReauthDoc(doc: string): boolean {
-        const firstScript = doc.split('<script>')[1].split('</script>')[0]
+    async isReauthDoc(doc: string): Promise<boolean> {
+        const scripts = findScripts(doc)
+        const firstScript = scripts[0]
         return firstScript.includes(this.REAUTH_SUBSTR)
     }
 }
