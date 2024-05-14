@@ -68,13 +68,13 @@ interface LanStatus {
 interface WlanStatus {
     enabled: boolean
     name: string
-    type: number
-    channelManual: number | null
-    channelAuto: number | null
-    channelWidth: number
+    type: string
+    channelManual: string | null
+    channelAuto: string | null
+    channelWidth: string
     mac: string
     ip: string
-    wdsStatus: number
+    wdsStatus: string
 }
 
 interface WanStatus {
@@ -180,13 +180,13 @@ export class GeneralStatus extends Fetcher {
         return {
             enabled: Boolean(wlan[0]),
             name: wlan[1],
-            type: Number(WlanType[wlan[3]]),
+            type: WlanType[wlan[3]],
             channelManual: wlan[2] === 15 ? null : wlan[2],
-            channelWidth: Number(WlanChannelWidth[wlan[6]]),
+            channelWidth: WlanChannelWidth[wlan[6]],
             channelAuto: wlan[9],
             mac: wlan[4],
             ip: wlan[5],
-            wdsStatus: Number(WdsStatus[wlan[10]]),
+            wdsStatus: WdsStatus[wlan[10]],
         }
     }
 
