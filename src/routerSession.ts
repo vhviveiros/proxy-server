@@ -1,6 +1,7 @@
 import { Md5 } from 'ts-md5'
 import { findScripts } from './script-finder'
 import axios, { AxiosInstance } from 'axios'
+import { Response } from 'express'
 
 export abstract class RouterInterface {
     abstract ssid: string
@@ -16,6 +17,7 @@ export interface HeaderInterface {
 }
 
 export class RouterSession extends RouterInterface {
+    readonly routerSettings = require('../assets/router-settings.json')
     guestSsid: string
     ssid: string
     host: string
@@ -27,11 +29,13 @@ export class RouterSession extends RouterInterface {
     basicToken: string | undefined
     session: AxiosInstance | undefined
     headers: HeaderInterface | undefined
-    readonly routerSettings = require('../assets/router-settings.json')
 
-    constructor(bssid: string, guestSsid: string, autoReauth = true, authRetries = 3, timeout?: number) {
+    constructor(public clientNotifier: Response, ssid: string, guestSsid: string, autoReauth = true, authRetries = 3, timeout?: number) {
         super()
-        this.ssid = bssid
+
+        this.notifyClient(`Starting router session with SSID ${ssid} and guest SSID ${guestSsid}. Working on ${this.routerSettings.ip}.`)
+
+        this.ssid = ssid
         this.guestSsid = guestSsid
         this.host = this.routerSettings.ip
         this.autoReauth = autoReauth
@@ -126,4 +130,17 @@ export class RouterSession extends RouterInterface {
         const firstScript = scripts[0]
         return firstScript.includes(this.REAUTH_SUBSTR)
     }
+
+    async notifyClient(message: string): Promise<void>
+    async notifyClient(html: string, headers: string): Promise<void>
+    async notifyClient(html?: string, headers?: string, message?: string): Promise<void> {
+        if (html && headers) {
+            this.clientNotifier.json({ "html": html, "headers": headers })
+            return
+        } if (message) {
+            this.clientNotifier.send(message)
+            return
+        }
+    }
+
 }
