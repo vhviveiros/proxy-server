@@ -13,7 +13,7 @@ app.listen(PORT, () => console.log(`server running on port ${PORT}`))
 
 app.get('/router', (req: any, res: any) => {
     try {
-        const routerSession = new RouterSession()
+        const routerSession = new RouterSession('TP-LINK_72F6', 'TP-LINK_GUEST_72F6')
         routerSession.refreshToken().then(() => {
             try {
                 const generalStatus = new GeneralStatus().fetch(routerSession)
@@ -28,8 +28,6 @@ app.get('/router', (req: any, res: any) => {
                         return
                     }
 
-                    targetAp.channel = "11"
-
                     const isChannelValid = WlanApConfig.checkChannels(responses[0], targetAp)
 
                     if (isChannelValid) {
@@ -39,7 +37,7 @@ app.get('/router', (req: any, res: any) => {
 
                     const wlan = new WlanApConfig()
                     wlan.setApConf(routerSession, targetAp).then((r) => {
-                        res.json({ "html": r.apConfigUrl, "headers": routerSession.headers })
+                        res.json({ "html": r.page, "headers": routerSession.headers })
                         return
                     })
 

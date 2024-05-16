@@ -3,6 +3,9 @@ import { findScripts } from './script-finder'
 import axios, { AxiosInstance } from 'axios'
 
 export abstract class RouterInterface {
+    abstract ssid: string
+    abstract guestSsid: string
+
     abstract page(name: string, params?: any): Promise<string>
     abstract pageUrl(name: string): string
 }
@@ -13,6 +16,8 @@ export interface HeaderInterface {
 }
 
 export class RouterSession extends RouterInterface {
+    guestSsid: string
+    ssid: string
     host: string
     autoReauth: boolean
     authRetries: number
@@ -24,8 +29,10 @@ export class RouterSession extends RouterInterface {
     headers: HeaderInterface | undefined
     readonly routerSettings = require('../assets/router-settings.json')
 
-    constructor(autoReauth = true, authRetries = 3, timeout?: number) {
+    constructor(bssid: string, guestSsid: string, autoReauth = true, authRetries = 3, timeout?: number) {
         super()
+        this.ssid = bssid
+        this.guestSsid = guestSsid
         this.host = this.routerSettings.ip
         this.autoReauth = autoReauth
         this.authRetries = Math.max(authRetries, 0)
@@ -76,7 +83,6 @@ export class RouterSession extends RouterInterface {
 
         while (true) {
             const doc = await this.pageLoadAttempt(url, referer)
-            //doc should be complete already
             if (!(await this.isReauthDoc(doc))) {
                 return doc
             }
