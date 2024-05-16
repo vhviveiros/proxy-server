@@ -4,6 +4,7 @@ import axios, { AxiosInstance } from 'axios'
 
 export abstract class RouterInterface {
     abstract page(name: string, params?: any): Promise<string>
+    abstract pageUrl(name: string): string
 }
 
 export interface HeaderInterface {
@@ -70,18 +71,18 @@ export class RouterSession extends RouterInterface {
         return `${this.baseUrl()}/${this.token}/userRpm/${name}.htm`
     }
 
-    async page(name: string, referer?: string): Promise<string> {
+    async page(url: string, referer?: string): Promise<string> {
         let retry = false
 
         while (true) {
-            const doc = await this.pageLoadAttempt(name, referer)
+            const doc = await this.pageLoadAttempt(url, referer)
             //doc should be complete already
             if (!(await this.isReauthDoc(doc))) {
                 return doc
             }
 
             if (retry || !this.autoReauth) {
-                throw new Error(`Failed to load page ${name}. Firmware of the router may not support this feature`)
+                throw new Error(`Failed to load page ${url}. Firmware of the router may not support this feature`)
             }
 
             retry = true
@@ -89,10 +90,7 @@ export class RouterSession extends RouterInterface {
         }
     }
 
-    async pageLoadAttempt(name: string, referer = this.pageUrl("MenuRpm")): Promise<string> {
-        const url = this.pageUrl(name)
-        // const referer = this.pageUrl("MenuRpm")
-
+    async pageLoadAttempt(url: string = '', referer = this.pageUrl("MenuRpm")): Promise<string> {
         const resp = await this.get(url, referer)
         if (resp.status !== 200) {
             throw new Error(`HTTP code ${resp.status}`)

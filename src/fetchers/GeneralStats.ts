@@ -88,6 +88,9 @@ interface WanStatus {
 }
 
 export class GeneralStatus extends Fetcher {
+    referer: string = ''
+    page: string = "StatusRpm.htm"
+
     wireless: boolean
     uptime: number
     firmware: string
@@ -126,7 +129,7 @@ export class GeneralStatus extends Fetcher {
 
     async fetch(router: RouterInterface): Promise<GeneralStatus> {
         //doc receives the data from file "results.txt"
-        const doc = await router.page("StatusRpm.htm")
+        const doc = await router.page(router.pageUrl(this.page))
         //Doc must have all the router info already
         const [general, lan, wlan, statist, wan] = Object.values(extractVars(doc, [
             "statusPara", "lanPara", "wlanPara", "statistList", "wanPara"

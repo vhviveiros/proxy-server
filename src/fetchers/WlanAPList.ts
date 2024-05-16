@@ -2,7 +2,7 @@ import { RouterSession } from "../RouterSession"
 import { extractVars } from "../utils"
 import { Fetcher } from "./fetcher"
 
-interface WlanAP {
+export interface WlanAp {
     bssid: string
     ssid: string
     signal: string
@@ -10,7 +10,7 @@ interface WlanAP {
     security: string
 }
 
-enum WlanAPSecurity {
+export enum WlanAPSecurity {
     "NONE" = 0,
     "WEP" = 1,
     "WPA-PSK" = 2,
@@ -21,27 +21,28 @@ enum WlanAPSecurity {
     "WPA/WPA2" = 7
 }
 
-export class WlanAPList extends Fetcher {
+export class WlanApList extends Fetcher {
     readonly referer = 'WlanNetworkRpm'
-    public apList: WlanAP[] | undefined
+    readonly page = 'popupSiteSurveyRpm'
+    public apList: WlanAp[] | undefined
 
 
-    async fetch(router: RouterSession): Promise<WlanAPList> {
-        const doc = await router.page("popupSiteSurveyRpm", router.pageUrl(this.referer))
+    async fetch(router: RouterSession): Promise<WlanApList> {
+        const doc = await router.page(router.pageUrl(this.page), router.pageUrl(this.referer))
         const siteList = Object.values(extractVars(doc, ["siteList"]))
         this.apList = this.convertSiteList(siteList[0])
         return this
     }
 
-    private convertSiteList(siteList: any[]): WlanAP[] {
-        const wlanAPs: WlanAP[] = []
+    private convertSiteList(siteList: any[]): WlanAp[] {
+        const wlanAPs: WlanAp[] = []
         for (let i = 0; i < siteList.length; i += 5) {
-            const wlanAP: WlanAP = {
+            const wlanAP: WlanAp = {
                 bssid: siteList[i],
                 ssid: siteList[i + 1],
                 signal: siteList[i + 2],
                 channel: siteList[i + 3],
-                security: WlanAPSecurity[siteList[i + 4]]
+                security: siteList[i + 4]
             }
             wlanAPs.push(wlanAP)
         }

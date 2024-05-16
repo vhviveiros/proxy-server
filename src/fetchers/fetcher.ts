@@ -4,6 +4,8 @@ import { RouterInterface } from "../RouterSession"
 
 export abstract class Fetcher {
     abstract fetch(router: RouterInterface): Promise<Fetcher>
+    abstract readonly referer: string
+    abstract readonly page: string
 
     public toDict(): { [key: string]: any } {
         return this.asdict(this)
