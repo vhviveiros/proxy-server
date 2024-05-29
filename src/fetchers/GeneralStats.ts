@@ -128,6 +128,7 @@ export class GeneralStatus extends Fetcher {
 
 
     async fetch(router: RouterInterface): Promise<GeneralStatus> {
+        console.log(`Fetching General Status...`)
         //doc receives the data from file "results.txt"
         const doc = await router.page(router.pageUrl(this.page))
         //Doc must have all the router info already
@@ -143,6 +144,8 @@ export class GeneralStatus extends Fetcher {
             "wan": this.parseWan(wan!, general!),
         }
 
+        console.log("...done.")
+        console.log(`General Status: ${JSON.stringify(status)}`)
         return new GeneralStatus(status)
     }
 

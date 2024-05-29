@@ -28,9 +28,12 @@ export class WlanApList extends Fetcher {
 
 
     async fetch(router: RouterSession): Promise<WlanApList> {
+        console.log(`Fetching Wlan Ap List...`)
         const doc = await router.page(router.pageUrl(this.page), router.pageUrl(this.referer))
         const siteList = Object.values(extractVars(doc, ["siteList"]))
         this.apList = this.convertSiteList(siteList[0])
+        console.log("...done.")
+        console.log(`Wlan Ap List: ${JSON.stringify(this.apList)}`)
         return this
     }
 

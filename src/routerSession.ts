@@ -30,10 +30,8 @@ export class RouterSession extends RouterInterface {
     session: AxiosInstance | undefined
     headers: HeaderInterface | undefined
 
-    constructor(public clientNotifier: Response, ssid: string, guestSsid: string, autoReauth = true, authRetries = 3, timeout?: number) {
+    constructor(ssid: string, guestSsid: string, autoReauth = true, authRetries = 3, timeout?: number) {
         super()
-
-        this.notifyClient(`Starting router session with SSID ${ssid} and guest SSID ${guestSsid}. Working on ${this.routerSettings.ip}.`)
 
         this.ssid = ssid
         this.guestSsid = guestSsid
@@ -130,17 +128,4 @@ export class RouterSession extends RouterInterface {
         const firstScript = scripts[0]
         return firstScript.includes(this.REAUTH_SUBSTR)
     }
-
-    async notifyClient(message: string): Promise<void>
-    async notifyClient(html: string, headers: string): Promise<void>
-    async notifyClient(html?: string, headers?: string, message?: string): Promise<void> {
-        if (html && headers) {
-            this.clientNotifier.json({ "html": html, "headers": headers })
-            return
-        } if (message) {
-            this.clientNotifier.send(message)
-            return
-        }
-    }
-
 }

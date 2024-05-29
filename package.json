@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "main": "src/index.ts",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "tsc",
+    "postbuild": "copy src\\script.sh dist\\"
   },
   "author": "",
   "license": "ISC",
