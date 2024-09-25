@@ -10,6 +10,7 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@network-utils/tcp-ping": "^1.2.3",
     "axios": "^1.6.8",
     "axios-cookiejar-support": "^5.0.1",
     "cors": "^2.8.5",
